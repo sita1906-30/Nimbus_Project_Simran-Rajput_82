@@ -1,0 +1,88 @@
+void displaySeats(int movieIndex, int showIndex) {
+    printf("Seat Layout for %s at %s:\n", movies[movieIndex].name, movies[movieIndex].showTimes[showIndex]);
+    printf("  ");
+    for (int j = 0; j < COLS; j++) {
+        printf("%2d ", j + 1);
+    }
+    printf("\n");
+    for (int i = 0; i < ROWS; i++) {
+        printf("%2d ", i + 1);
+        for (int j = 0; j < COLS; j++) {
+            char displayChar = (movies[movieIndex].seats[showIndex][i][j] == 'F') ? '#' : '*';
+            printf("%2c ", displayChar);
+        }
+        printf("\n");
+    }
+}
+
+float calculateCost(int seatCount) {
+    float subtotal = seatCount * BASE_PRICE;
+    float tax = subtotal * TAX_RATE;
+    return subtotal + tax;
+}
+
+void bookSeats() {
+    char customerName[50], moviesname[50], showTimes[20];
+    int movieIndex, showIndex, seatCount;
+    printf("Enter customer name: ");
+    fgets(customerName, sizeof(customerName), stdin);
+    customerName[strcspn(customerName, "\n")] = 0; // remove newline
+    printf("Enter movies name: ");
+    fgets(moviesname, sizeof(moviesname), stdin);
+    moviesname[strcspn(moviesname, "\n")] = 0; // remove newline
+    movieIndex = findMovieIndex(moviesname);
+    if (movieIndex == -1) {
+        printf("Movie not found.\n");
+        return;
+    }
+    printf("Enter show time: ");
+    fgets(showTimes, sizeof(showTimes), stdin);
+    showTimes[strcspn(showTimes, "\n")] = 0; // remove newline
+    showIndex = -1;
+    for (int i = 0; i < 3; i++) {
+        if (strcmp(movies[movieIndex].showTimes[i], showTimes) == 0) {
+            showIndex = i;
+            break;
+        }
+    }
+    if (showIndex == -1) {
+        printf("Show time not found.\n");
+        return;
+    }
+    displaySeats(movieIndex, showIndex);
+    printf("Enter number of seats to book: ");
+    scanf("%d", &seatCount);
+    if (seatCount > MAX_SEATS) {
+        printf("Too many seats.\n");
+        return;
+    }
+    int seats[MAX_SEATS][2];
+    for (int i = 0; i < seatCount; i++) {
+        printf("Enter row and column for seat %d (1-based): ", i + 1);
+        scanf("%d %d", &seats[i][0], &seats[i][1]);
+        seats[i][0]--; // 0-based
+        seats[i][1]--;
+        if (seats[i][0] < 0 || seats[i][0] >= ROWS || seats[i][1] < 0 || seats[i][1] >= COLS ||
+            movies[movieIndex].seats[showIndex][seats[i][0]][seats[i][1]] == 'O') {
+            printf("Invalid or occupied seat.\n");
+            return;
+        }
+    }
+    // Book seats
+    for (int i = 0; i < seatCount; i++) {
+        movies[movieIndex].seats[showIndex][seats[i][0]][seats[i][1]] = 'O';
+    }
+    // Add booking
+    if (bookingCount >= maxBookings) {
+        maxBookings += 10;
+        bookings = realloc(bookings, maxBookings * sizeof(Booking));
+    }
+    strcpy(bookings[bookingCount].customerName, customerName);
+    strcpy(bookings[bookingCount].movieName, moviesname);
+    strcpy(bookings[bookingCount].showTime, showTimes);
+    bookings[bookingCount].seatCount = seatCount;
+    memcpy(bookings[bookingCount].seats, seats, sizeof(seats));
+    bookings[bookingCount].totalCost = calculateCost(seatCount);
+    bookingCount++;
+    printf("Booking successful. Total cost: %.2f\n", bookings[bookingCount - 1].totalCost);
+}
